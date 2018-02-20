@@ -1,0 +1,28 @@
+﻿fragment FolderInfo on Folder {
+    Name
+    Path
+    Id
+    CanRead: HasCapability(capability:Read)
+    CanWrite: HasCapability(capability:Write)
+    ChildFiles {
+        Name
+        Path
+    }
+}
+
+{
+    Root {
+        ChildFolders {
+            ...FolderInfo
+            ChildFolders {
+                ...FolderInfo
+                ChildFolders {
+                    ...FolderInfo
+                    ChildFolders {
+                        ...FolderInfo
+                    }
+                }
+            }
+        }
+    }
+}
