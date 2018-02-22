@@ -85,12 +85,14 @@ let rootFolder() =
     }
 
 type Children = SQL<"""
-    select Id, Content is null as IsFolder from Entries where ParentFolderId = @parentId
+    select coalesce(ParentFolderId, 0) as ParentFolderId, Id, Content is null as IsFolder from Entries where ParentFolderId in @parentId
 """>
+
+let childrenFactory = SharedCommandFactory<int, _>((fun ids -> Children.Command(Seq.toArray ids)), fun row -> row.ParentFolderId)
 
 let childFolders (FolderId parentId) =
     plan {
-        let! children = Children.Command(parentId).Plan()
+        let! children = Plan.ofErrand <| childrenFactory.ErrandForKey(parentId)
         return
             [| for child in children do 
                 if child.IsFolder = Some true then yield FolderId child.Id
@@ -99,7 +101,7 @@ let childFolders (FolderId parentId) =
 
 let childFiles (FolderId parentId) =
     plan {
-        let! children = Children.Command(parentId).Plan()
+        let! children = Plan.ofErrand <| childrenFactory.ErrandForKey(parentId)
         return
             [| for child in children do 
                 if child.IsFolder = Some false then yield FileId child.Id
@@ -107,19 +109,21 @@ let childFiles (FolderId parentId) =
     }
 
 type EntryInfo = SQL<"""
-    select Name, ParentFolderId from Entries where Id = @id
+    select Id, Name, ParentFolderId from Entries where Id in @id
 """>
+
+let entryInfoFactory = SharedCommandFactory<int, _>((fun ids -> EntryInfo.Command(Seq.toArray ids)), fun row -> row.Id)
 
 let entryName (EntryId id) =
     plan {
-        let! entry = EntryInfo.Command(id).ExactlyOne()
-        return entry.Name
+        let! entries = Plan.ofErrand <| entryInfoFactory.ErrandForKey(id)
+        return entries.[0].Name
     }
 
 let entryParent (EntryId id) =
     plan {
-        let! entry = EntryInfo.Command(id).ExactlyOne()
-        return entry.ParentFolderId |> Option.map FolderId
+        let! entries = Plan.ofErrand <| entryInfoFactory.ErrandForKey(id)
+        return entries.[0].ParentFolderId |> Option.map FolderId
     }
 
 type DeleteEntry = SQL<"""
@@ -149,9 +153,10 @@ let renameEntry (EntryId id) (newName : string) =
 
 type GetDirectPermissionSetting = SQL<"""
     select * from Permissions
-    where EntryId = @entryId
-    and UserId = @userId
+    where EntryId in @entryId
 """>
+
+let permissionSettingFactory = SharedCommandFactory<int, _>((fun ids -> GetDirectPermissionSetting.Command(Seq.toArray ids)), fun row -> row.EntryId)
 
 let capabilityToInt = function
     | Read -> 1
@@ -164,10 +169,10 @@ let intToCapability = function
 
 let getDirectPermissionSetting (EntryId entryId) (UserId userId) (cap : Capability) =
     plan {
-        let! rows = GetDirectPermissionSetting.Command(entryId = entryId, userId = userId).Plan()
+        let! rows = Plan.ofErrand <| permissionSettingFactory.ErrandForKey(entryId)
         let capabilityInt = capabilityToInt cap
         let matchedRow =
-            rows |> Seq.tryFind(fun r -> r.Capability = capabilityInt)
+            rows |> Seq.tryFind(fun r -> r.Capability = capabilityInt && r.UserId = userId)
         return
             match matchedRow with
             | None -> None
