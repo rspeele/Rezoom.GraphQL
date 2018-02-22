@@ -45,8 +45,8 @@ let setupRoot (session : SessionToken) =
         let random = Random()
         let! root = session.Folders.RootFolder()
         let! children = session.Folders.ChildFolders(root)
-        if children.Length > 0 then
-            return failwith "Already set up!"
-        else
+        if children.Length = 0 then
             return! setupRandomChildren 0 random session root
+        else
+            return ()
     }

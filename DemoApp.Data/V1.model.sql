@@ -22,6 +22,8 @@ create table Entries
 , Content string null -- null for folders
 );
 
+create index IX_Entries_ParentFolderId on Entries(ParentFolderId);
+
 create table Permissions
 ( EntryId int references Entries(Id)
 , UserId int references Users(Id)

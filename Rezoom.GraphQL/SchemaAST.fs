@@ -142,6 +142,13 @@ and ConcreteValue =
     | EnumValue of EnumValue
     | ListValue of ConcreteValue ListWithSource
     | ObjectValue of IReadOnlyDictionary<string, ConcreteValue WithSource>
+    member this.ObjectCount =
+        match this with
+        | ScalarValue _ 
+        | NullValue
+        | EnumValue _ -> 0
+        | ListValue xs -> xs |> Seq.sumBy (fun it -> it.Value.ObjectCount)
+        | ObjectValue xs -> 1 + (xs.Values |> Seq.sumBy (fun it -> it.Value.ObjectCount))
     member this.GetString() =
         match this with
         | NullValue -> null

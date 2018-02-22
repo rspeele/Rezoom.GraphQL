@@ -19,6 +19,7 @@ open Suave
 open Suave.Filters
 open Suave.Operators
 open Suave.Successful
+open DemoApp.Data.Queries
 
 // pull query string out of { query: "..." } wrapper since that's what GraphiQL wants
 type RequestWrapper = { query : string }
@@ -55,6 +56,12 @@ let main argv =
     let (SessionToken token) as sessionToken = (execPlan (SessionToken.Login("robert.s.peele@gmail.com", "test"))).Result.Value
     printfn "using session token %s" token
 
+    do
+        printfn "initializing data"
+        let t = Rezoom.Execution.execute Rezoom.Execution.ExecutionConfig.Default (SetUpFolderTree.setupRoot sessionToken)
+        t.Wait()
+        printfn "ready"
+
     let runQuery =
         let query = Query()
         let schema = AutoSchema(query, Mutation())
@@ -70,7 +77,7 @@ let main argv =
                 sw.Start()
                 let! executed = Async.AwaitTask <| execPlan plan
                 sw.Stop()
-                printfn "Executed GraphQL operation in %d ms" sw.ElapsedMilliseconds
+                printfn "Executed GraphQL operation returning %d objects in %d ms" executed.ObjectCount sw.ElapsedMilliseconds
                 let wrapper = // wrap response with { data: ... } since that's what GraphiQL wants
                     let fields = Dictionary()
                     fields.Add("data", { Source = SourceInfo.Artificial; Value = executed })

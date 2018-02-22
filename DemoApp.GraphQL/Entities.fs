@@ -93,7 +93,3 @@ type Mutation() =
     member this.SetFilePermission(session : SessionToken, fileId, userId, capability, permission) =
         session.Files.SetDirectPermission(fileId, userId, capability, permission)
 
-    [<Obsolete("Only for first-time setup")>]
-    member this.CreateFolderTree(session : SessionToken) =
-        SetUpFolderTree.setupRoot session
-
