@@ -1,6 +1,8 @@
 # Rezoom GraphQL proof-of-concept
 
-Demo for Bazinga. Documentation pending. In the mean time check out:
+Demo sponsored by [Bazinga](https://mybazinga.com) in March 2018.
+
+Released under the MIT license.
 
 * [Domain layer API](./DemoApp.Domain/DomainTypes.fs)
 * [Domain layer code](./DemoApp.Domain.Implementation/FolderService.fs)
